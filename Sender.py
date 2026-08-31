@@ -43,17 +43,9 @@ def get_host_ip():
     这个方法并不会真实的向外部发包，所以用抓包工具是看不到的。但是会申请一个 UDP 的端口，所以如果经常调用也会比较耗时的，这里如果需要可以将查询到的IP给缓存起来，性能可以获得很大提升。
     :return:
     """
-    global _local_ip
-    s = None
-    try:
-        if not _local_ip:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('8.8.8.8', 80))
-            _local_ip = s.getsockname()[0]
-        return _local_ip
-    finally:
-        if s:
-            s.close()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(('8.8.8.8', 80))
+        return s.getsockname()[0]
 
 
 def mail_ip_send(ip_real):
@@ -73,7 +65,8 @@ itr = 3 * 3600 / seconds_sleep  # IP地址无变动时默认发送邮件的小�
 while 1:
     ip_real = get_host_ip()
     h = datetime.datetime.now().hour
-    if (ip_real != ip_val) & ((h <= 3) | (h >= 7)) | num == 0:  #晚上3点到早7点之间不发送IP
+    if num == 0 or (
+    ip_real != ip_val and (h <= 3 or h >= 7)):  #晚上3点到早7点之间不发送IP
         mail_ip_send(ip_real)
         ip_val = ip_real
     num += 1
